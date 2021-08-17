@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import CryptoJS from 'crypto-js';
-import { stringify } from 'flatted';
 
 export default function CreateProfile() {
   const [userEmail, setUserEmail] = useState('');
@@ -12,7 +11,7 @@ export default function CreateProfile() {
   const [responseData, setResponseData] = useState('');
 
   const handleSubmit = async () => {
-    const message = await stringify({
+    const message = await JSON.stringify({
       emailAddress: userEmail,
       phonePri: userPhone,
     });
@@ -20,12 +19,17 @@ export default function CreateProfile() {
     const encrypted = await CryptoJS.AES.encrypt(message, authKey, {
       iv: authIv,
     });
-    console.log(encrypted.toString());
+    console.log((await encrypted).toString(CryptoJS.format.Hex));
+
+    const decrypted = CryptoJS.AES.decrypt(encrypted, authKey, {
+      iv: authIv,
+    });
+    console.log(decrypted.toString(CryptoJS.enc.Utf8));
 
     axios
       .post(
         'http://188.166.164.3:9595/paysure/api/processor/create-profile',
-        encrypted.toString(),
+        (await encrypted).toString(CryptoJS.format.Hex),
         {
           headers: {
             Authorization: authHeader,
@@ -33,9 +37,9 @@ export default function CreateProfile() {
         },
       )
       .then((response) => {
-        setResponseData(stringify(response.data));
+        setResponseData(JSON.stringify(response.data));
       })
-      .catch((err) => console.error('error' + stringify(err)));
+      .catch((err) => console.error(JSON.stringify(err)));
   };
 
   return (
@@ -52,6 +56,8 @@ export default function CreateProfile() {
         value={userPhone}
         onChange={(e) => setUserPhone(e.target.value)}
       />
+      <br />
+      <br />
       <input
         type="text"
         placeholder="authHeader"
@@ -71,7 +77,7 @@ export default function CreateProfile() {
         onChange={(e) => setAuthIv(e.target.value)}
       />
       <div>
-        <p>responseData: [{responseData}]</p>
+        <p>responseData: {responseData}</p>
       </div>
       <input type="submit" onClick={handleSubmit} />
     </div>
